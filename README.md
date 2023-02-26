@@ -1,1 +1,5 @@
 # Monitor-Go
+
+```
+make run
+```
