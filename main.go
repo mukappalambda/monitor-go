@@ -26,6 +26,33 @@ type hello struct {
 	comments []Comment
 }
 
+type parent struct {
+	app.Compo
+}
+
+type child struct {
+	app.Compo
+	name string
+}
+
+func (p *parent) Render() app.UI {
+	firstChild := &child{}
+	secondChild := &child{}
+
+	firstChild.name = "alex"
+	secondChild.name = "bob"
+
+	return app.Div().Body(
+		app.Div().Text("My children:"),
+		firstChild,
+		secondChild,
+	)
+}
+
+func (c *child) Render() app.UI {
+	return app.Div().Text(c.name)
+}
+
 // The Render method is where the component appearance is defined. Here, a
 // "Hello World!" is displayed as a heading.
 func (h *hello) Render() app.UI {
@@ -70,6 +97,7 @@ func main() {
 	// This is done by calling the Route() function,  which tells go-app what
 	// component to display for a given path, on both client and server-side.
 	app.Route("/", &hello{})
+	app.Route("/parent", &parent{})
 
 	// Once the routes set up, the next thing to do is to either launch the app
 	// or the server that serves the app.
