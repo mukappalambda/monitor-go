@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 
@@ -11,94 +12,53 @@ import (
 // hello is a component that displays a simple "Hello World!". A component is a
 // customizable, independent, and reusable UI element. It is created by
 // embedding app.Compo into a struct.
+
+type Comment struct {
+	Postid int    `json:"postId,omitempty"`
+	Id     int    `json:"id,omitempty"`
+	Name   string `json:"name,omitempty"`
+	Email  string `json:"email,omitempty"`
+	Body   string `json:"body,omitempty"`
+}
+
 type hello struct {
 	app.Compo
-	comment interface{}
-	a       int
-}
-
-// OnPreRender method for the hello component.
-func (h *hello) OnNav(ctx app.Context) {
-	// The OnPreRender method is called before the component is rendered. It is
-	// used to initialize the component state.
-	//
-	// Here, the component state is initialized with the current time.
-
-	// fetch data from jsonplaceholder comment's API
-
-	// client := &http.Client{}
-	// req, err := http.NewRequest("GET", "https://jsonplaceholder.typicode.com/comments", nil)
-
-	// if err != nil {
-	// 	log.Fatal(err)
-	// 	return
-	// }
-
-	// resp, err := client.Do(req)
-
-	// if err != nil {
-	// 	log.Fatal(err)
-	// 	return
-	// }
-
-	// var data interface{}
-	// err = json.NewDecoder(resp.Body).Decode(&data)
-
-	// defer resp.Body.Close()
-
-	// if err != nil {
-	// 	log.Fatal(err)
-	// 	return
-	// }
-	fmt.Println("OnNav", h.comment)
-
-	ctx.Async(func() {
-		fmt.Println("dispatch", h.comment)
-		ctx.Dispatch(func(ctx app.Context) {
-			h.comment = 123
-		})
-	})
-
-}
-
-func (h *hello) OnMount(ctx app.Context) {
-	// The OnMount method is called after the component is rendered for the
-	// first time. It is used to initialize the component state.
-	//
-	// Here, the component state is initialized with the current time.
-	h.a = 1
-	fmt.Println("OnMount", h.comment)
-	h.Update()
+	comments []Comment
 }
 
 // The Render method is where the component appearance is defined. Here, a
 // "Hello World!" is displayed as a heading.
-func (h *hello) Render(ctx app.Context) app.UI {
+func (h *hello) Render() app.UI {
+	return app.Div().Body(
+		app.H1().Text("Comments"),
+		app.Range(h.comments).Slice(func(i int) app.UI {
+			return app.Li().Text(h.comments[i])
+		}),
+	)
 
+}
+
+func (h *hello) OnMount(ctx app.Context) {
 	ctx.Async(func() {
-		fmt.Println("dispatch", h.comment)
+		resp, err := http.Get("https://jsonplaceholder.typicode.com/comments/")
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		var comments []Comment
+		if err = json.Unmarshal(body, &comments); err != nil {
+			log.Fatal(err)
+			return
+		}
+
 		ctx.Dispatch(func(ctx app.Context) {
-			h.comment = 123
+			h.comments = comments
+			h.Update()
 		})
 	})
 
-	fmt.Println("Render", h.comment)
-	fmt.Println("Render", h.a)
-
-	return app.Div().Body(
-		app.Div().Body(
-			app.A().Href("/sad").Text("Home"),
-			app.If(h.comment == 123,
-				app.Div().Text("yes"),
-				// app.H1().Text("Hello World!"),
-				// app.Range(h.comment.([]interface{})).Slice(
-				// 	func(i int) app.UI {
-				// 		return app.Div().Text(h.comment.([]interface{})[i].(map[string]interface{})["name"].(string))
-				// 	},
-				// ),
-			).Else(app.Div().Text("Loading...")),
-		),
-	)
 }
 
 // The main function is the entry point where the app is configured and started.
